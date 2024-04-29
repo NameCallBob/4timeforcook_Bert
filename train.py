@@ -20,6 +20,7 @@ labels_to_ids = {
         "B-ALG":5,"B-STP":6,"B-TME":7,
         "B-UDO":8,"B-TAG":9,"I-ING":10,"I-TAG":11
 }
+# 模型參數
 LEARNING_RATE = 1e-4
 EPOCHS = 10
 BATCH_SIZE = 16
