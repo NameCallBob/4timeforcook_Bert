@@ -167,21 +167,29 @@ class DataBase:
 
 
 
+
 class Trans_db(DataBase):
-    """將原資料進行轉換"""
+    """
+    資料來源:https://www.kaggle.com/datasets/shuyangli94/food-com-recipes-and-user-interactions
+    將csv資料導入Django MySQL資料庫中，且翻譯成中文
+    註:翻譯速度非常的慢，約10秒一筆資料
+    """
     def trans(self):
         """將原資料庫資料進行轉換!"""
         d1 , d2 = super().resource()
         data = d1
         # print(d1)
         from threading import Thread ;
-
-        t1 = Thread(target=self.__toObject,args=(data,))
-        t2 = Thread(target=self.__toAttribute,args=(data,))
-        t1.start() ; t2.start()
-        print("處理結束已將資料存於資料庫")
+        self.ErrorCount=0
+        # t1 = Thread(target=self.__toObject,args=(data,))
+        # t2 = Thread(target=self.__toAttribute,args=(data,))
+        t3 = Thread(target=self.__toChineseObject,args=(data,))
+        # t1.start() ; t2.start() ;
+        t3.start()
+        print("處理結束已將資料存於資料庫");
 
     def __toObject(self, data):
+        from recipe.models import Recipe_Ob
         for index, row in data.iterrows():
             Recipe_Ob.objects.create(
                 rid=row['id'],
@@ -195,22 +203,90 @@ class Trans_db(DataBase):
         print('O_complete')
 
     def __toAttribute(self, data):
+        from recipe.models import Recipe_At
         for index, row in data.iterrows():
+            nutrition=eval(row['nutrition'])
             Recipe_At.objects.create(
                 rid=row['id'],
                 minutes=row['minutes'],
-                nutrition=row['nutrition'],
+                calories=nutrition[0],
+                fat = nutrition[1],
+                sugar = nutrition[2],
+                sodium = nutrition[3],
+                protein = nutrition[4],
+                saturated_fat = nutrition[5],
+                carbohydrates = nutrition[6],
                 n_steps=row['n_steps'],
                 n_ingredients=row['n_ingredients']
             ).save()
         print("A_complete")
 
-    def translate_to_chinese(text):
-        from googletrans import Translator
-        translator = Translator()
-        translation = translator.translate(text, dest='zh-tw')
-        return translation.text
+    def __toChineseObject(self,data):
 
+        from recipe.models import Chinese_Ob
+        for index, row in data.iterrows():
+            try:
+                Chinese_Ob.objects.create(
+                    rid=row['id'],
+                    name= self.translate_to_chinese(1,row['name']),
+                    tags=self.translate_to_chinese(5,row['tags']),
+                    steps=self.translate_to_chinese(2,row['steps']),
+                    description=self.translate_to_chinese(3,row['description']),
+                    ingredients=self.translate_to_chinese(4,row['ingredients'])
+                ).save()
+            except Exception as e:
+                self.ErrorCount+=1
+                raise SystemError(e)
+
+    def translate_to_chinese(self,type,text):
+        """透過套件翻譯成中文"""
+        from deep_translator import GoogleTranslator
+        import nltk
+        if type in [1,3]:
+            # 字比較少
+            try:
+                if text == "":
+                    # 若資料沒有為空
+                    res="沒有文字介紹喔!"
+                else:
+                    res =GoogleTranslator(
+                        source="english",target="zh-TW"
+                        ).translate(text)
+            except Exception as e :
+                # 出現字數量過多錯誤
+                # systemerror: nan --> text must be a valid text with maximum 5000 character,otherwise it cannot be translated
+                try:
+                    res=""
+                    x = nltk.tokenize.sent_tokenize(text)
+                    for sentence in x :
+                                try:
+                                        tmp = GoogleTranslator(
+                                            source="english",target="zh-TW"
+                                            ).translate(sentence)
+                                        res += tmp
+                                except:
+                                    res += ("字數過多，無法呈現")
+                except:
+                    # 出現該文字有型態問題，越過並記錄
+                    res = "字數過多，無法呈現"
+                    self.ErrorCount += 1
+                    print(f"weird:{self.ErrorCount}")
+        else:
+            # 字多，採分割的方式翻譯
+                res = []
+                for i in eval(text):
+                    # https://stackoverflow.com/questions/70673172/how-to-solve-text-must-be-a-valid-text-with-maximum-5000-character-otherwise-it
+                    x = nltk.tokenize.sent_tokenize(i)
+                    for sentence in x :
+                            try:
+                                res.append(
+                                    GoogleTranslator(
+                                        source="english",target="zh-TW"
+                                        ).translate(sentence)
+                                    )
+                            except:
+                                res.append("字數過多，無法呈現")
+        return res
 
 if __name__=="__main__":
     # DataBase().know_value()
