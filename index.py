@@ -1,62 +1,26 @@
-import os
-import shutil
+import torch
+import torch.nn as nn
+# 自己的model
+from dataset import BertNERDataset
+# tokenizer
+from transformers import BertTokenizerFast
 
-import tensorflow as tf
-import tensorflow_hub as hub
-import tensorflow_text as text
-from official.nlp import optimization  # to create AdamW optimizer
-
-import matplotlib.pyplot as plt
-
-tf.get_logger().setLevel('ERROR')
-
-
-url = 'https://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz'
-
-dataset = tf.keras.utils.get_file('aclImdb_v1.tar.gz', url,
-                                  untar=True, cache_dir='.',
-                                  cache_subdir='')
-
-dataset_dir = os.path.join(os.path.dirname(dataset), 'aclImdb')
-
-train_dir = os.path.join(dataset_dir, 'train')
-
-# remove unused folders to make it easier to load the data
-remove_dir = os.path.join(train_dir, 'unsup')
-shutil.rmtree(remove_dir)
+# 使用GPU or CPU
+device = "cuda" if torch.cuda.is_available() else "cpu"
+print(f"目前使用{device}進行預測!")
 
 
-AUTOTUNE = tf.data.AUTOTUNE
-batch_size = 32
-seed = 42
+model = torch.load("model.pth")
 
-raw_train_ds = tf.keras.utils.text_dataset_from_directory(
-    'aclImdb/train',
-    batch_size=batch_size,
-    validation_split=0.2,
-    subset='training',
-    seed=seed)
+model.eval()
 
-class_names = raw_train_ds.class_names
-train_ds = raw_train_ds.cache().prefetch(buffer_size=AUTOTUNE)
+# 暫時用
+from train import training_data_load
+df_train, df_test = training_data_load()
+texts = df_train[0][500:520]
 
-val_ds = tf.keras.utils.text_dataset_from_directory(
-    'aclImdb/train',
-    batch_size=batch_size,
-    validation_split=0.2,
-    subset='validation',
-    seed=seed)
+from dataset import evaluate_one_text
 
-val_ds = val_ds.cache().prefetch(buffer_size=AUTOTUNE)
-
-test_ds = tf.keras.utils.text_dataset_from_directory(
-    'aclImdb/test',
-    batch_size=batch_size)
-
-test_ds = test_ds.cache().prefetch(buffer_size=AUTOTUNE)
-
-for text_batch, label_batch in train_ds.take(1):
-  for i in range(3):
-    print(f'Review: {text_batch.numpy()[i]}')
-    label = label_batch.numpy()[i]
-    print(f'Label : {label} ({class_names[label]})')
+for i in texts:
+    sentence, label = evaluate_one_text(model, i)
+    print(sentence) ; print(label)
