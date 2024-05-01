@@ -22,7 +22,7 @@ labels_to_ids = {
 }
 # 模型參數
 LEARNING_RATE = 1e-4
-EPOCHS = 10
+EPOCHS = 100
 BATCH_SIZE = 16
 
 
@@ -178,9 +178,7 @@ def train_loop(model, df_train, df_val):
                 total_loss_val += loss.item()
 
         val_accuracy = total_acc_val / len(df_val)
-        print(val_accuracy)
         val_loss = total_loss_val / len(df_val)
-        # print(val_loss)
 
         print("Logits stats:")
         print(

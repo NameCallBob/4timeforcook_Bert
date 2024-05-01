@@ -24,10 +24,10 @@ class TrainingData:
     def run(self):
         """主要執行將將資料轉換為可訓練資料"""
         d = self.data_import()
-        Vocal_sentence, Vocal_label = self.add_Vocab()
-        print("單詞處理完畢")
+        # Vocal_sentence, Vocal_label = self.add_Vocab()
+        # print("單詞處理完畢")
         file_sentence , file_label = self.deal_file(d)
-        sentence = (d['Eng'].tolist()+Vocal_sentence ) ; labels = (file_label+Vocal_label)
+        sentence = (d['Eng'].tolist() ) ; labels = (file_label)
         print("句子與單詞合併完成")
 
         if len(sentence) == len(labels):
@@ -137,10 +137,10 @@ class TrainingData:
         upordown = ["fewer", "lower", "more", "under", "uper", "without"]
         special_mark = ["[ClS]","[SEP]","[PAD]"]
         if len(sentence) == 1:
-            if sentence in ing:
-                res.append("B-ING")
-            elif sentence in tag:
+            if sentence in tag:
                 res.append("B-TAG")
+            elif sentence in ing:
+                res.append("B-ING")
             elif sentence in Nutrition or sentence in Nutrition_L:
                 res.append("B-NUT")
             elif sentence in step:
